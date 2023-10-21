@@ -1,0 +1,32 @@
+#navbar {
+    background-color: black;
+    padding: 10px;
+    margin: -8px;
+}
+
+#navbar>a {
+    color: white;
+    text-decoration: none;
+    padding: 10px;
+    font-size: 20px;
+}
+
+#navbar>span {
+    color: white;
+    font-size: 25px;
+}
+
+#footer {
+    border-top: 1px rgb(213, 213, 213) solid;
+    margin-top: auto;
+    text-align: center;
+    padding-top: 20px;
+    padding-bottom: 30px;
+}
+
+body {
+    display: flex;
+    min-height: 95vh;
+    flex-direction: column;
+    justify-content: flex-start;
+}
