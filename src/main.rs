@@ -5,7 +5,6 @@ use std::{
 };
 
 use http_server::ThreadPool;
-use walkdir::WalkDir;
 
 fn main() { 
     let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
@@ -18,6 +17,41 @@ fn main() {
             let _ = handle_connection(stream);
         });
     }
+}
+
+struct HTTP {
+    status_line: &'static str,
+    filename: String
+}
+
+fn find_requested_file(path: &str, file_route: String) -> HTTP {
+    /* Find requested file by walking the directory */
+    let mut entries = fs::read_dir(path).expect("directory does not exist")
+        .map(|res| res.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>().unwrap();
+
+    entries.sort();
+
+    let mut http = HTTP {
+        status_line: "HTTP/1.1 404 NOT FOUND",
+        filename: String::from("static/404.html"),
+    };
+
+    for entry in entries.clone() {
+        let path = entry.to_str().unwrap();
+        if path == file_route {
+            http = HTTP {
+                status_line: "HTTP/1.1 200 OK",
+                filename: file_route,
+            };
+            return http;
+        }
+        else if entry.is_dir() {
+            http = find_requested_file(entry.to_str().unwrap(), file_route.clone());
+        }
+    }
+
+    return http;
 }
 
 fn handle_connection(mut stream: TcpStream) -> Result<(), io::Error>{
@@ -33,31 +67,14 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), io::Error>{
         file_route += "index.html";
     }
 
-    println!("{}", file_route);
-
-    let mut success = false;
-    let mut status_line = "";
-    let mut filename = String::new();
-
-    for entry in WalkDir::new("static").min_depth(1) {
-        if entry?.path().to_str().unwrap() == file_route {
-            success = true;
-            status_line = "HTTP/1.1 200 OK";
-            filename = file_route;
-            break;
-        }
-    }
-
-    if !success {
-        filename = String::from("static/404.html");
-        status_line = "HTTP/1.1 404 NOT FOUND";
-    }
-
-    let contents = fs::read_to_string(filename).unwrap();
+    // walk static directory
+    let http = find_requested_file("static", file_route);
+    
+    let contents = fs::read_to_string(http.filename).unwrap();
     
     let response = format!(
         "{}\r\nContent-Length: {}\r\n\r\n{}",
-        status_line,
+        http.status_line,
         contents.len(),
         contents);
 
